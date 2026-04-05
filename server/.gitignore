@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+dist/
+build/
+*.log
+logs/
+coverage/
+.nyc_output/
+.eslintcache
+*.tsbuildinfo
