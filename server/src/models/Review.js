@@ -5,7 +5,6 @@ const reviewSchema = new mongoose.Schema(
     customer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      default: null,
     },
     customerName: {
       type: String,

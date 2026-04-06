@@ -6,7 +6,7 @@ import * as yup from 'yup';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import toast from 'react-hot-toast';
-import { CalendarCheck, ClipboardList, Copy, CheckCircle2, User, Phone, Loader2 } from 'lucide-react';
+import { CalendarCheck, ClipboardList, Copy, CheckCircle2, User, Phone, Mail, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createAppointment, getBookedSlots } from '@/services/appointmentService';
 import { getPackages } from '@/services/packageService';
@@ -15,19 +15,43 @@ import ManageAppointment from '@/components/ManageAppointment';
 const schema = yup.object({
   guestName:   yup.string().trim().min(2, 'Min 2 characters').max(80).required('Name is required'),
   guestPhone:  yup.string().trim().matches(/^[0-9+\-\s()]{7,20}$/, 'Enter a valid mobile number').required('Mobile number is required'),
+  guestEmail:  yup.string().trim().email('Enter a valid email address').optional(),
   packageName: yup.string().required('Please select a package'),
-  date:        yup.date().typeError('Please select a date').required('Please select a date').min(new Date(), 'Date must be in the future'),
+  date:        yup.date().typeError('Please select a date').required('Please select a date').min(new Date(new Date().setHours(0,0,0,0)), 'Date cannot be in the past'),
   timeSlot:    yup.string().required('Please select a time slot'),
   notes:       yup.string().max(300, 'Notes cannot exceed 300 characters').optional(),
 });
 
 const TIME_SLOTS = [
-  '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM',
-  '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
-  '1:00 PM',  '1:30 PM',  '2:00 PM',  '2:30 PM',
-  '3:00 PM',  '3:30 PM',  '4:00 PM',  '4:30 PM',
-  '5:00 PM',  '5:30 PM',  '6:00 PM',  '6:30 PM',
+  '8:00 AM',  '9:00 AM',  '10:00 AM', '11:00 AM',
+  '12:00 PM', '1:00 PM',  '2:00 PM',  '3:00 PM',
+  '4:00 PM',  '5:00 PM',  '6:00 PM',  '7:00 PM',
+  '8:00 PM',
 ];
+
+// Format a Date as YYYY-MM-DD using LOCAL calendar date (avoids UTC timezone shift)
+const localDateStr = (d) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+// Parse a slot string like '8:00 AM' / '12:00 PM' into today's Date for comparison
+const slotToDate = (slot, baseDate) => {
+  const [time, meridiem] = slot.split(' ');
+  let   [hours, minutes] = time.split(':').map(Number);
+  if (meridiem === 'PM' && hours !== 12) hours += 12;
+  if (meridiem === 'AM' && hours === 12) hours  = 0;
+  const d = new Date(baseDate);
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+};
+
+const isToday = (d) => {
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() &&
+         d.getMonth()    === now.getMonth()    &&
+         d.getDate()     === now.getDate();
+};
 
 function SuccessScreen({ result, onManage, onBookAnother }) {
   const [copied, setCopied] = useState(false);
@@ -130,7 +154,7 @@ export default function BookAppointment() {
   // Fetch booked slots whenever selected date changes
   useEffect(() => {
     if (!selectedDate) { setTakenSlots([]); return; }
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = localDateStr(selectedDate);
     setSlotsLoading(true);
     // Clear the currently selected time if it becomes taken
     getBookedSlots(dateStr)
@@ -150,6 +174,7 @@ export default function BookAppointment() {
     if (user) {
       setValue('guestName', user.name || '');
       if (user.phone) setValue('guestPhone', user.phone);
+      if (user.email) setValue('guestEmail', user.email);
     }
   }, [user, setValue]);
 
@@ -161,7 +186,8 @@ export default function BookAppointment() {
   const onSubmit = async (data) => {
     try {
       setLoading(true);
-      const result = await createAppointment(data);
+      // Send date as local YYYY-MM-DD string so the server receives the correct calendar date
+      const result = await createAppointment({ ...data, date: localDateStr(data.date) });
       setBooked(result); // { appointment, pin }
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Booking failed. Please try again.');
@@ -238,7 +264,20 @@ export default function BookAppointment() {
                 </div>
               </div>
 
-              {/* Package */}
+              {/* Email */}
+              <div>
+                <label className="label">
+                  <Mail className="w-3.5 h-3.5 inline mr-1.5 text-gold-500" />
+                  Email Address <span className="text-dark-500 text-xs font-normal">(optional — for booking confirmation)</span>
+                </label>
+                <input
+                  {...register('guestEmail')}
+                  type="email"
+                  placeholder="you@example.com"
+                  className={`input-field ${errors.guestEmail ? 'border-red-500 focus:border-red-500' : ''}`}
+                />
+                {errors.guestEmail && <p className="error-text">{errors.guestEmail.message}</p>}
+              </div>
               <div>
                 <label className="label">Select Package <span className="text-gold-500">*</span></label>
                 <select
@@ -285,16 +324,18 @@ export default function BookAppointment() {
                 <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                   {TIME_SLOTS.map((slot) => {
                     const isTaken    = takenSlots.includes(slot);
+                    const isPast     = selectedDate && isToday(selectedDate) && slotToDate(slot, selectedDate) <= new Date();
+                    const isDisabled = isTaken || isPast || !selectedDate || slotsLoading;
                     const isSelected = selectedTime === slot;
                     return (
                       <button
                         key={slot}
                         type="button"
-                        disabled={isTaken || !selectedDate || slotsLoading}
+                        disabled={isDisabled}
                         onClick={() => setValue('timeSlot', slot, { shouldValidate: true })}
-                        title={isTaken ? 'Already booked' : undefined}
+                        title={isTaken ? 'Already booked' : isPast ? 'Time has passed' : undefined}
                         className={`text-xs py-2.5 rounded-lg border transition-all relative ${
-                          isTaken
+                          isTaken || isPast
                             ? 'border-dark-700 bg-dark-800 text-dark-600 cursor-not-allowed line-through'
                             : isSelected
                             ? 'border-gold-500 bg-gold-500/10 text-gold-400 font-medium'
