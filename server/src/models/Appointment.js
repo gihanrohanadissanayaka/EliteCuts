@@ -19,6 +19,13 @@ const appointmentSchema = new mongoose.Schema(
       maxlength: 20,
       default: null,
     },
+    guestEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      maxlength: 120,
+      default: null,
+    },
     pinHash: {
       type: String,
       default: null,

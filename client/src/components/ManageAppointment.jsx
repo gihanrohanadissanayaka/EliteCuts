@@ -11,12 +11,16 @@ import { getPackages } from '@/services/packageService';
 import { useEffect } from 'react';
 
 const TIME_SLOTS = [
-  '9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM',
-  '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
-  '1:00 PM',  '1:30 PM',  '2:00 PM',  '2:30 PM',
-  '3:00 PM',  '3:30 PM',  '4:00 PM',  '4:30 PM',
-  '5:00 PM',  '5:30 PM',  '6:00 PM',  '6:30 PM',
+  '8:00 AM',  '9:00 AM',  '10:00 AM', '11:00 AM',
+  '12:00 PM', '1:00 PM',  '2:00 PM',  '3:00 PM',
+  '4:00 PM',  '5:00 PM',  '6:00 PM',  '7:00 PM',
+  '8:00 PM',
 ];
+
+const localDateStr = (d) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 const lookupSchema = yup.object({
   phone: yup.string().trim().min(7, 'Enter a valid mobile number').required('Mobile number is required'),
@@ -25,7 +29,7 @@ const lookupSchema = yup.object({
 
 const editSchema = yup.object({
   packageName: yup.string().required('Please select a package'),
-  date:        yup.date().required('Please select a date').min(new Date(), 'Date must be in the future'),
+  date:        yup.date().required('Please select a date').min(new Date(new Date().setHours(0,0,0,0)), 'Date cannot be in the past'),
   timeSlot:    yup.string().required('Please select a time slot'),
   notes:       yup.string().max(300, 'Notes cannot exceed 300 characters').optional(),
 });
@@ -134,7 +138,11 @@ function EditForm({ appointment, pin, packages, onSave, onCancel }) {
 
   const onSubmit = async (values) => {
     try {
-      const updated = await updateGuestAppointment(appointment._id, { pin, ...values });
+      const updated = await updateGuestAppointment(appointment._id, {
+        pin,
+        ...values,
+        ...(values.date instanceof Date && { date: localDateStr(values.date) }),
+      });
       toast.success('Appointment updated!');
       onSave(updated);
     } catch (err) {

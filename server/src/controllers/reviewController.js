@@ -26,7 +26,7 @@ async function createReview(req, res, next) {
     }
 
     const review = await Review.create({
-      customer:     req.user?._id  || null,
+      ...(req.user?._id && { customer: req.user._id }),
       customerName: req.user?.name || customerName,
       rating,
       comment,

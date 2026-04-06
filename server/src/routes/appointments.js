@@ -17,6 +17,7 @@ const validate = require('../middleware/validate');
 const createRules = [
   body('guestName').if((v, { req }) => !req.user).trim().isLength({ min: 2, max: 80 }).withMessage('Name must be 2–80 characters'),
   body('guestPhone').if((v, { req }) => !req.user).trim().isLength({ min: 7, max: 20 }).withMessage('Enter a valid mobile number'),
+  body('guestEmail').optional({ checkFalsy: true }).isEmail().normalizeEmail().withMessage('Enter a valid email address'),
   body('packageName').trim().notEmpty().withMessage('Package name is required'),
   body('date').isISO8601().toDate().withMessage('Valid date is required'),
   body('timeSlot').trim().notEmpty().withMessage('Time slot is required'),

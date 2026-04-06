@@ -1,8 +1,18 @@
-const bcrypt      = require('bcryptjs');
-const Appointment = require('../models/Appointment');
+const bcrypt        = require('bcryptjs');
+const Appointment   = require('../models/Appointment');
+const { sendNewAppointmentAlert, sendBookingConfirmation } = require('../services/emailService');
 
 function generatePin() {
   return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+// Safely parse a date value (YYYY-MM-DD string, full ISO string, or Date object) into UTC midnight.
+function toUTCMidnight(value) {
+  // If already a Date object, convert to ISO string first so the regex always works
+  const str = (value instanceof Date) ? value.toISOString() : String(value);
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return new Date(NaN);
+  return new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00.000Z`);
 }
 
 // Strips pinHash before sending appointment data
@@ -34,10 +44,13 @@ async function getBookedSlots(req, res, next) {
     const { date } = req.query;
     if (!date) return res.status(400).json({ message: 'date query param is required.' });
 
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
+    // Anchor to UTC midnight so the range is timezone-independent
+    const start = toUTCMidnight(date);
+    const end   = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1); // 23:59:59.999 UTC same day
+
+    if (isNaN(start.getTime())) {
+      return res.status(400).json({ message: 'Invalid date format.' });
+    }
 
     const taken = await Appointment.find({
       date:   { $gte: start, $lte: end },
@@ -53,7 +66,7 @@ async function getBookedSlots(req, res, next) {
 // POST /api/appointments  (no auth required)
 async function createAppointment(req, res, next) {
   try {
-    const { packageName, date, timeSlot, notes, guestName, guestPhone } = req.body;
+    const { packageName, date, timeSlot, notes, guestName, guestPhone, guestEmail } = req.body;
 
     const isGuest = !req.user;
     if (isGuest && (!guestName || !guestPhone)) {
@@ -61,8 +74,26 @@ async function createAppointment(req, res, next) {
     }
 
     // Slot conflict check
+    const appointmentDate = toUTCMidnight(date);
+    if (isNaN(appointmentDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid appointment date.' });
+    }
+
+    // Reject past time slots for today's bookings
+    const todayUTC = toUTCMidnight(new Date());
+    if (appointmentDate.getTime() === todayUTC.getTime()) {
+      const [timePart, meridiem] = timeSlot.split(' ');
+      let [h, m] = timePart.split(':').map(Number);
+      if (meridiem === 'PM' && h !== 12) h += 12;
+      if (meridiem === 'AM' && h === 12) h  = 0;
+      const slotTime = new Date();
+      slotTime.setHours(h, m, 0, 0);
+      if (slotTime <= new Date()) {
+        return res.status(400).json({ message: 'This time slot has already passed.' });
+      }
+    }
     const conflict = await Appointment.findOne({
-      date:     new Date(date),
+      date:     appointmentDate,
       timeSlot,
       status:   { $in: ['pending', 'confirmed'] },
     });
@@ -77,14 +108,20 @@ async function createAppointment(req, res, next) {
       customer:   req.user?._id   || null,
       guestName:  req.user?.name  || guestName,
       guestPhone: req.user?.phone || guestPhone,
+      guestEmail: req.user?.email || guestEmail || null,
       packageName,
-      date:       new Date(date),
+      date:       appointmentDate,
       timeSlot,
       notes:      notes || '',
       pinHash,
     });
 
     // Return PIN once in plain text — never stored again
+    // Fire-and-forget admin alert (don't block the response)
+    sendNewAppointmentAlert(appointment).catch((err) =>
+      console.error('[Email] Admin alert failed:', err.message)
+    );
+
     res.status(201).json({ appointment: safeAppt(appointment), pin });
   } catch (err) {
     next(err);
@@ -139,7 +176,7 @@ async function updateByPin(req, res, next) {
     if (!valid) return res.status(401).json({ message: 'Incorrect PIN.' });
 
     // Slot conflict check (excluding current appointment)
-    const newDate     = date     ? new Date(date) : appointment.date;
+    const newDate     = date     ? toUTCMidnight(date) : appointment.date;
     const newTimeSlot = timeSlot || appointment.timeSlot;
     const conflict = await Appointment.findOne({
       _id:    { $ne: appointment._id },
@@ -253,6 +290,13 @@ async function updateAppointmentStatus(req, res, next) {
     ).populate('customer', 'name email');
 
     if (!appointment) return res.status(404).json({ message: 'Appointment not found.' });
+
+    // Send confirmation email to guest when admin confirms
+    if (status === 'confirmed') {
+      sendBookingConfirmation(appointment).catch((err) =>
+        console.error('[Email] Confirmation email failed:', err.message)
+      );
+    }
 
     res.json(safeAppt(appointment));
   } catch (err) {
