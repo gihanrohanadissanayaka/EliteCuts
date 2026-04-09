@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   CalendarCheck2, ChevronLeft, ChevronRight, RefreshCw,
   Clock, Package, User, Phone, FileText, CheckCircle,
-  XCircle, Loader2, CalendarDays, ListFilter,
+  XCircle, Loader2, CalendarDays, ListFilter, Download,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getAllAppointments, updateAppointmentStatus } from '@/services/appointmentService';
 import AdminNav from '@/components/AdminNav';
+import { generateReceipt } from '@/utils/generateReceipt';
 
 /* ─── helpers ─────────────────────────────────────────────────────── */
 
@@ -113,6 +114,16 @@ function AppointmentRow({ appt, onStatusChange }) {
         </span>
 
         {busy && <Loader2 className="w-4 h-4 text-dark-400 animate-spin" />}
+
+        {!busy && (appt.status === 'confirmed' || appt.status === 'completed') && (
+          <button
+            onClick={() => generateReceipt(appt)}
+            className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-gold-500/30 bg-gold-500/10 text-gold-400 hover:bg-gold-500/20 transition-colors"
+          >
+            <Download className="w-3 h-3" />
+            Receipt
+          </button>
+        )}
 
         {!busy && nextOpts.map((opt) => {
           const m = STATUS_META[opt];

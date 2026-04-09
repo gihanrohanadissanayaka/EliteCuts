@@ -28,7 +28,7 @@ export default function Navbar() {
           <Link to="/" className="flex items-center gap-2 group">
             <Scissors className="w-6 h-6 text-gold-500 group-hover:rotate-12 transition-transform duration-300" />
             <span className="font-serif text-xl font-bold text-white">
-              Elite<span className="text-gold-500">Cuts</span>
+              Salon <span className="text-gold-500">DECO</span>
             </span>
           </Link>
 

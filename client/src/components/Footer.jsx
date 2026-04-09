@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Scissors, MapPin, Phone, Mail, Instagram, Facebook, Twitter } from 'lucide-react';
+import { Scissors, MapPin, Phone, Mail, Facebook } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -11,21 +11,15 @@ export default function Footer() {
             <div className="flex items-center gap-2 mb-4">
               <Scissors className="w-5 h-5 text-gold-500" />
               <span className="font-serif text-lg font-bold text-white">
-                Elite<span className="text-gold-500">Cuts</span>
+                Salon <span className="text-gold-500">DECO</span>
               </span>
             </div>
             <p className="text-dark-400 text-sm leading-relaxed">
-              Premium salon experience tailored for you. Style, class, and perfection in every cut.
+              Premium salon experience tailored for you. Style, class, and perfection in every visit. Est. 2022.
             </p>
             <div className="flex items-center gap-4 mt-5">
-              <a href="#" aria-label="Instagram" className="text-dark-400 hover:text-gold-400 transition-colors">
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a href="#" aria-label="Facebook" className="text-dark-400 hover:text-gold-400 transition-colors">
+              <a href="https://www.facebook.com/salonthedeco" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-dark-400 hover:text-gold-400 transition-colors">
                 <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" aria-label="Twitter" className="text-dark-400 hover:text-gold-400 transition-colors">
-                <Twitter className="w-5 h-5" />
               </a>
             </div>
           </div>
@@ -56,15 +50,15 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2 text-dark-400">
                 <MapPin className="w-4 h-4 text-gold-500 mt-0.5 flex-shrink-0" />
-                123 Style Street, Fashion District, NY 10001
+                Puwakdandawa, Beliatta, Sri Lanka
               </li>
               <li className="flex items-center gap-2 text-dark-400">
                 <Phone className="w-4 h-4 text-gold-500 flex-shrink-0" />
-                +1 (555) 123-4567
+                076 715 7718
               </li>
               <li className="flex items-center gap-2 text-dark-400">
                 <Mail className="w-4 h-4 text-gold-500 flex-shrink-0" />
-                hello@elitecuts.com
+                contact.salondeco@gmail.com
               </li>
             </ul>
           </div>
@@ -81,7 +75,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-dark-700 mt-10 pt-6 text-center text-dark-500 text-sm">
-          © {new Date().getFullYear()} EliteCuts. All rights reserved.
+          © {new Date().getFullYear()} Salon DECO. All rights reserved.
         </div>
       </div>
     </footer>

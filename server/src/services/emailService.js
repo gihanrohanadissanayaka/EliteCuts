@@ -1,25 +1,36 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-const SALON_NAME = 'EliteCuts';
+const SALON_NAME = 'Salon DECO';
 
-// Read these at call-time so .env changes are always picked up after server restart
-function getClient()      { return new Resend(process.env.RESEND_API_KEY); }
-function getAdminEmail()  { return process.env.ADMIN_EMAIL; }
-function getFromAddress() { return process.env.EMAIL_FROM || 'EliteCuts <onboarding@resend.dev>'; }
+function getTransporter() {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+}
 
-// Resend SDK v2 never throws — it returns { data, error }. Throw manually on error.
+function getFromAddress() {
+  return `${SALON_NAME} <${process.env.GMAIL_USER}>`;
+}
+
 async function send(payload) {
-  const { data, error } = await getClient().emails.send(payload);
-  if (error) throw new Error(`Resend error: ${error.message}`);
-  return data;
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.warn('[Email] Skipped — GMAIL_USER or GMAIL_APP_PASSWORD not set');
+    return;
+  }
+  const info = await getTransporter().sendMail(payload);
+  console.log('[Email] Sent:', info.messageId, '→', payload.to);
 }
 
 /**
  * Notify admin when a new appointment is created.
  */
 async function sendNewAppointmentAlert(appointment) {
-  const adminEmail = getAdminEmail();
-  if (!adminEmail || !process.env.RESEND_API_KEY) return;
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail || !process.env.GMAIL_USER) return;
 
   const dateStr = new Date(appointment.date).toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -33,7 +44,7 @@ async function sendNewAppointmentAlert(appointment) {
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#111;color:#e5e5e5;border-radius:12px;overflow:hidden;">
         <div style="background:#b8860b;padding:24px 32px;">
           <h1 style="margin:0;font-size:22px;color:#fff;">✂ ${SALON_NAME}</h1>
-          <p style="margin:6px 0 0;color:#fff9e6;font-size:14px;">New appointment booking</p>
+            <p style="margin:8px 0 0;color:#fff9e6;font-size:14px;">New appointment booking — please review</p>
         </div>
         <div style="padding:32px;">
           <table style="width:100%;border-collapse:collapse;font-size:14px;">
@@ -62,7 +73,7 @@ async function sendNewAppointmentAlert(appointment) {
  */
 async function sendBookingConfirmation(appointment) {
   const email = appointment.guestEmail;
-  if (!email || !process.env.RESEND_API_KEY) return;
+  if (!email || !process.env.GMAIL_USER) return;
 
   const dateStr = new Date(appointment.date).toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -71,19 +82,21 @@ async function sendBookingConfirmation(appointment) {
   await send({
     from:    getFromAddress(),
     to:      email,
-    subject: `Your ${SALON_NAME} appointment is confirmed`,
+    subject: `Your Salon DECO appointment is confirmed`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#111;color:#e5e5e5;border-radius:12px;overflow:hidden;">
         <div style="background:#b8860b;padding:24px 32px;">
           <h1 style="margin:0;font-size:22px;color:#fff;">✂ ${SALON_NAME}</h1>
-          <p style="margin:6px 0 0;color:#fff9e6;font-size:14px;">Booking Confirmed</p>
+            <p style="margin:8px 0 0;color:#fff9e6;font-size:14px;">Your appointment is confirmed ✓</p>
         </div>
         <div style="padding:32px;">
-          <p style="margin:0 0 24px;font-size:15px;">Hi <strong>${appointment.guestName}</strong>, your appointment has been confirmed!</p>
+          <p style="margin:0 0 24px;font-size:15px;">Hi <strong>${appointment.guestName}</strong>, your appointment at <strong>Salon DECO</strong> has been confirmed!</p>
           <table style="width:100%;border-collapse:collapse;font-size:14px;">
             <tr><td style="padding:8px 0;color:#999;width:130px;">Package</td>  <td style="padding:8px 0;color:#fff;">${appointment.packageName}</td></tr>
             <tr><td style="padding:8px 0;color:#999;">Date</td>     <td style="padding:8px 0;color:#fff;">${dateStr}</td></tr>
             <tr><td style="padding:8px 0;color:#999;">Time</td>     <td style="padding:8px 0;color:#fff;">${appointment.timeSlot}</td></tr>
+            <tr><td style="padding:8px 0;color:#999;">Address</td>   <td style="padding:8px 0;color:#fff;">Puwakdandawa, Beliatta, Sri Lanka</td></tr>
+            <tr><td style="padding:8px 0;color:#999;">Phone</td>     <td style="padding:8px 0;color:#fff;">076 715 7718</td></tr>
           </table>
           <div style="margin-top:24px;padding:16px;background:#1a1a1a;border-radius:8px;border:1px solid #2a2a2a;">
             <p style="margin:0 0 6px;font-size:13px;color:#999;">Need to reschedule or cancel? Use your PIN on our website.</p>
