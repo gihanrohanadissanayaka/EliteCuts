@@ -1,5 +1,6 @@
 const bcrypt        = require('bcryptjs');
 const Appointment   = require('../models/Appointment');
+const Package       = require('../models/Package');
 const { sendNewAppointmentAlert, sendBookingConfirmation } = require('../services/emailService');
 
 function generatePin() {
@@ -104,22 +105,27 @@ async function createAppointment(req, res, next) {
     const pin     = generatePin();
     const pinHash = await bcrypt.hash(pin, 10);
 
+    // Look up the package price to store on the appointment
+    const pkg = await Package.findOne({ name: packageName }).select('price').lean();
+    const packagePrice = pkg ? pkg.price : null;
+
     const appointment = await Appointment.create({
-      customer:   req.user?._id   || null,
-      guestName:  req.user?.name  || guestName,
-      guestPhone: req.user?.phone || guestPhone,
-      guestEmail: req.user?.email || guestEmail || null,
+      customer:     req.user?._id   || null,
+      guestName:    req.user?.name  || guestName,
+      guestPhone:   req.user?.phone || guestPhone,
+      guestEmail:   req.user?.email || guestEmail || null,
       packageName,
-      date:       appointmentDate,
+      packagePrice,
+      date:         appointmentDate,
       timeSlot,
-      notes:      notes || '',
+      notes:        notes || '',
       pinHash,
     });
 
     // Return PIN once in plain text — never stored again
     // Fire-and-forget admin alert (don't block the response)
     sendNewAppointmentAlert(appointment).catch((err) =>
-      console.error('[Email] Admin alert failed:', err.message)
+      console.error('[Email] Admin alert failed:', err)
     );
 
     res.status(201).json({ appointment: safeAppt(appointment), pin });
@@ -294,7 +300,7 @@ async function updateAppointmentStatus(req, res, next) {
     // Send confirmation email to guest when admin confirms
     if (status === 'confirmed') {
       sendBookingConfirmation(appointment).catch((err) =>
-        console.error('[Email] Confirmation email failed:', err.message)
+        console.error('[Email] Confirmation email failed:', err)
       );
     }
 

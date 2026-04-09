@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { CalendarCheck, Clock, Package, XCircle, CheckCircle, AlertCircle } from 'lucide-react';
+import { CalendarCheck, Clock, Package, XCircle, CheckCircle, AlertCircle, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getMyAppointments, cancelAppointment } from '@/services/appointmentService';
+import { generateReceipt } from '@/utils/generateReceipt';
 
 const STATUS_STYLES = {
   pending:   { color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30', icon: <AlertCircle className="w-3.5 h-3.5" /> },
@@ -38,15 +39,26 @@ function AppointmentRow({ appointment, onCancel }) {
         {notes && <p className="text-dark-500 text-xs italic">"{notes}"</p>}
       </div>
 
-      {status === 'pending' || status === 'confirmed' ? (
-        <button
-          onClick={() => onCancel(_id)}
-          className="flex items-center gap-1 text-red-400 hover:text-red-300 text-sm font-medium transition-colors whitespace-nowrap"
-        >
-          <XCircle className="w-4 h-4" />
-          Cancel
-        </button>
-      ) : null}
+      <div className="flex items-center gap-3">
+        {(status === 'confirmed' || status === 'completed') && (
+          <button
+            onClick={() => generateReceipt(appointment)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold-500/20 border border-gold-500/40 text-gold-400 hover:bg-gold-500/30 hover:text-gold-300 text-sm font-medium transition-colors whitespace-nowrap"
+          >
+            <FileText className="w-4 h-4" />
+            Download Receipt
+          </button>
+        )}
+        {(status === 'pending' || status === 'confirmed') && (
+          <button
+            onClick={() => onCancel(_id)}
+            className="flex items-center gap-1 text-red-400 hover:text-red-300 text-sm font-medium transition-colors whitespace-nowrap"
+          >
+            <XCircle className="w-4 h-4" />
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -126,7 +138,7 @@ export default function MyAppointments() {
           {past.length > 0 && (
             <div>
               <h2 className="text-dark-400 font-semibold mb-4">History ({past.length})</h2>
-              <div className="space-y-4 opacity-70">
+              <div className="space-y-4">
                 {past.map((a) => (
                   <AppointmentRow key={a._id} appointment={a} onCancel={handleCancel} />
                 ))}

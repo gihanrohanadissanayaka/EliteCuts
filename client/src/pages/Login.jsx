@@ -39,7 +39,7 @@ export default function Login() {
           <div className="flex items-center justify-center gap-2 mb-4">
             <Scissors className="w-6 h-6 text-gold-500" />
             <span className="font-serif text-2xl font-bold text-white">
-              Elite<span className="text-gold-500">Cuts</span>
+              Salon <span className="text-gold-500">DECO</span>
             </span>
           </div>
           <h1 className="text-3xl font-bold text-white font-serif mb-2">Welcome Back</h1>

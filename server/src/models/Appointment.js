@@ -49,6 +49,10 @@ const appointmentSchema = new mongoose.Schema(
       enum: ['pending', 'confirmed', 'completed', 'cancelled'],
       default: 'pending',
     },
+    packagePrice: {
+      type: Number,
+      default: null,
+    },
     notes: {
       type: String,
       trim: true,
