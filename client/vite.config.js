@@ -18,4 +18,16 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor':  ['react', 'react-dom', 'react-router-dom'],
+          'form-vendor':   ['react-hook-form', '@hookform/resolvers', 'yup'],
+          'ui-vendor':     ['react-datepicker', 'react-hot-toast', 'lucide-react'],
+          'http-vendor':   ['axios'],
+        },
+      },
+    },
+  },
 });
