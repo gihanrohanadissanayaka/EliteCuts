@@ -64,6 +64,6 @@ coverage/
 # (add your own video/image files here if you
 #  don't want them tracked in git)
 # ──────────────────────────────────────────────
-client/public/assets/*.mp4
-client/public/assets/*.webm
-client/public/assets/*.mov
+# client/public/assets/*.mp4
+# client/public/assets/*.webm
+# client/public/assets/*.mov
