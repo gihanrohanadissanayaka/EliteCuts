@@ -47,7 +47,8 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 /* ─── Health check ────────────────────────────────────────────────────── */
-app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'EliteCuts API' }));
+app.get('/health',     (_req, res) => res.json({ status: 'ok', service: 'Salon DECO API' }));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'Salon DECO API' }));
 
 /* ─── Routes ──────────────────────────────────────────────────────────── */
 app.use('/api/auth',         authRoutes);

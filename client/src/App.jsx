@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -15,10 +16,17 @@ import AdminPackages     from '@/pages/admin/Packages';
 import AdminEvents       from '@/pages/admin/Events';
 import AdminAppointments from '@/pages/admin/Appointments';
 import { useAppointmentAlert } from '@/hooks/useAppointmentAlert.jsx';
+import api from '@/services/api';
 
 // Runs hooks that need Router + Auth context
 function AppEffects() {
   useAppointmentAlert();
+
+  // Wake up the Render free-tier server on first load
+  useEffect(() => {
+    api.get('/health').catch(() => {});
+  }, []);
+
   return null;
 }
 
